@@ -17,9 +17,21 @@ class VolumeChecker:
     def __init__ (self, spotify : Spotify, sonosZoneName : str) :
         print ("init")
         self.spotify = spotify
-        self.sonosZone : SoCo = self.getSonosZone(sonosZoneName)
+        self.sonosZone : SoCo = self.getSonosZone(sonosZoneName)        
         self.currentTrackId : str = None
-        self.db = TinyDB('db.json')
+        self.db = TinyDB('db.json')       
+        self.lastVolume = self.sonosZone.volume        
+        track = self.getCurrentlyPlaying()   
+        if (track is not None):     
+            trackId = track['item']['id']
+            self.currentTrackId = trackId
+            loudness = self.getLoudness(trackId) 
+            self.desiredVolume = round(self.sonosZone.volume + loudness)        
+        else:
+            print("no track playing now")
+            self.currentTrackId = None
+            self.desiredVolume = round(self.sonosZone.volume - 10)            
+        print (f'Init: Desired volume= {self.desiredVolume}, starting sonos vol={self.lastVolume}')
 
     def getLoudness(self, trackId : str)  : 
         q = Query()
@@ -27,6 +39,7 @@ class VolumeChecker:
         if (len(results) > 0) :
             return results[0]["loudness"]
         else :
+            print ("non-cached track: hitting audio analysis api")
             analysis = self.spotify.audio_analysis(trackId)
             loudness = analysis['track']['loudness']
             self.db.table('tracks').insert({"trackId":trackId, "loudness":loudness})
@@ -40,9 +53,7 @@ class VolumeChecker:
 
     def getCurrentlyPlaying(self) :
         return self.spotify.currently_playing()
-
-    def getDesiredVolume(self) :
-        return 8
+    
 
     def setSonosVolume(self, volume : int) :
         print ("set volume")
@@ -53,18 +64,34 @@ class VolumeChecker:
         print (f'Found {myzone.player_name} :: {myzone.volume}')        
         return myzone
         
+    def checkIfUserChangedVolume(self) :
+        if (self.lastVolume != self.sonosZone.volume):
+            delta = self.sonosZone.volume - self.lastVolume
+            self.desiredVolume = self.desiredVolume + delta
+            self.lastVolume = self.sonosZone.volume
+            print (f'changed desired volume by {delta} to now: {self.desiredVolume}')
+
+    
+
     def adjustVolume(self) :
-        print (f'checking at {datetime.datetime.now()}')
-        track = self.getCurrentlyPlaying()
-        trackId = track['item']['id']
-        if (self.currentTrackId != trackId):      
-            self.currentTrackId = trackId      
-            print (f'new track: {trackId} : {track["item"]["name"]}')
-            loudness = self.getLoudness(trackId)
-            current = self.getDesiredVolume()
-            volume  = round(current - loudness)
-            print (f'track loudness = {loudness}, current = {current}, old vol = {self.sonosZone.volume}, setting vol to {volume}')        
-            self.sonosZone.volume = volume
+        state = self.sonosZone.get_current_transport_info()
+        
+        if (state is not None and state['current_transport_state'] == 'PLAYING'):
+            print (f'.', end='')     
+            self.checkIfUserChangedVolume()
+
+            track = self.getCurrentlyPlaying()   
+            if (track is not None):     
+                trackId = track['item']['id']
+                if (self.currentTrackId != trackId):      
+                    self.currentTrackId = trackId      
+                    print (f'new track: {trackId} : {track["item"]["name"]}')
+                    loudness = self.getLoudness(trackId)                        
+                    self.lastVolume  = round(self.desiredVolume - loudness)
+                    print (f'track loudness = {loudness}, desired = {self.desiredVolume}, old vol = {self.sonosZone.volume}, setting vol to {self.lastVolume}')        
+                    self.sonosZone.volume = self.lastVolume
+        else:
+            print('/', end='')
 
 
 def spotifyScratch():
@@ -111,7 +138,10 @@ def sonosScratch():
     zones = soco.discover()
     myzone : SoCo = list(filter(lambda x: x.player_name == os.environ.get("SONOS_ZONE"), zones))[0]
     print (f'{myzone.player_name} :: {myzone.volume}')
-    myzone.volume = 18
+    #myzone.volume = 18
+    channel = myzone.get_current_transport_info()
+    #myzone.state
+    print(channel)
 
 
 load_dotenv()
