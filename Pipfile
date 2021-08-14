@@ -5,6 +5,8 @@ name = "pypi"
 
 [packages]
 python-dotenv = "*"
+tinydb = "*"
+soco = "*"
 
 [dev-packages]
 spotipy = "*"
