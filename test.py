@@ -6,8 +6,11 @@ from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
 import os
 import tinydb
+from tinydb import TinyDB, Query
 import soco
 from soco import SoCo
+import time
+import datetime
 
 class VolumeChecker:
 
@@ -15,12 +18,19 @@ class VolumeChecker:
         print ("init")
         self.spotify = spotify
         self.sonosZone : SoCo = self.getSonosZone(sonosZoneName)
-        
+        self.currentTrackId : str = None
+        self.db = TinyDB('db.json')
 
     def getLoudness(self, trackId : str)  : 
-        analysis = self.spotify.audio_analysis(trackId)
-        loudness = analysis['track']['loudness']
-        return loudness
+        q = Query()
+        results = self.db.table('tracks').search(q.trackId == trackId)
+        if (len(results) > 0) :
+            return results[0]["loudness"]
+        else :
+            analysis = self.spotify.audio_analysis(trackId)
+            loudness = analysis['track']['loudness']
+            self.db.table('tracks').insert({"trackId":trackId, "loudness":loudness})
+            return loudness
 
     def getPlaylist(self, playlistId : str) :
         return self.spotify.playlist(playlistId)
@@ -44,12 +54,17 @@ class VolumeChecker:
         return myzone
         
     def adjustVolume(self) :
+        print (f'checking at {datetime.datetime.now()}')
         track = self.getCurrentlyPlaying()
-        loudness = self.getLoudness(track['item']['id'])
-        current = self.getDesiredVolume()
-        volume  = round(current - loudness)
-        print (f'track loudness = {loudness}, current = {current}, old vol = {self.sonosZone.volume}, setting vol to {volume}')        
-        self.sonosZone.volume = volume
+        trackId = track['item']['id']
+        if (self.currentTrackId != trackId):      
+            self.currentTrackId = trackId      
+            print (f'new track: {trackId} : {track["item"]["name"]}')
+            loudness = self.getLoudness(trackId)
+            current = self.getDesiredVolume()
+            volume  = round(current - loudness)
+            print (f'track loudness = {loudness}, current = {current}, old vol = {self.sonosZone.volume}, setting vol to {volume}')        
+            self.sonosZone.volume = volume
 
 
 def spotifyScratch():
@@ -58,7 +73,9 @@ def spotifyScratch():
     redirect_uri="http://127.0.0.1:4356",
     scope="user-read-currently-playing user-library-read")), os.environ.get("SONOS_ZONE"))
 
-    checker.adjustVolume()
+    while True:
+        checker.adjustVolume()
+        time.sleep(2)
 
     #results = sp.current_user_saved_tracks()
     #for idx, item in enumerate(results['items']):
