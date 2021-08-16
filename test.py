@@ -13,10 +13,10 @@ import json
 class VolumeChecker:
 
     def __init__(self, spotify: Spotify, sonosZoneName: str):
+        self.db = TinyDB('db.json')
         self.spotify = spotify
         self.sonosZone: SoCo = self.getSonosZone(sonosZoneName)
         self.currentTrackId: str = None
-        self.db = TinyDB('db.json')
         self.lastVolume = self.sonosZone.volume
         track = self.getCurrentlyPlaying()
         if (track is not None):
@@ -54,9 +54,20 @@ class VolumeChecker:
         return self.spotify.currently_playing()
 
     def getSonosZone(self, sonosZoneName: str) -> SoCo:
-        zones = soco.discover()
-        myzone: SoCo = list(filter(
-            lambda x: x.player_name == sonosZoneName, zones))[0]
+        myzone: SoCo = None
+        try:
+            zones = soco.discover()
+            myzone: SoCo = list(filter(
+                lambda x: x.player_name == sonosZoneName, zones))[0]
+            self.db.table("ips").truncate()
+            self.db.table("ips").insert({"ip": myzone.ip_address})
+        except Exception as ex:
+            print(f'Error with discovery, probably vpn: {ex}')
+            ips = self.db.table("ips").all()
+            if (len(ips) == 1):
+                myzone = SoCo(ips[0]["ip"])
+            else:
+                print("No cached entry for zone, can't discover")
         print(f'Found {myzone.player_name} :: {myzone.volume}')
         return myzone
 
