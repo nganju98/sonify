@@ -83,7 +83,7 @@ class VolumeChecker:
         state = self.sonosZone.get_current_transport_info()
         if (state is not None
                 and state['current_transport_state'] == 'PLAYING'):
-            print('.', end='')
+            print('.', end='', flush=True)
             self.checkIfUserChangedVolume()
 
             track = self.getCurrentlyPlaying()
@@ -100,7 +100,7 @@ class VolumeChecker:
                           f'setting vol to {self.lastVolume}')
                     self.sonosZone.volume = self.lastVolume
         else:
-            print('/', end='')
+            print('/', end='', flush=True)
 
 
 def spotifyScratch():
