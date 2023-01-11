@@ -1,8 +1,9 @@
 [Unit]
-Description=Sonos Grouping
+Description=Sonos Groupingg
 After=multi-user.target
 
 [Service]
+User=pi
 Type=idle
 ExecStart=/usr/bin/python3 /home/pi/sonify/grouping.py
 WorkingDirectory=/home/pi/sonify
