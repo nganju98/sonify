@@ -1,0 +1,18 @@
+[Unit]
+Description=Sonos Grouping
+After=multi-user.target
+
+[Service]
+Type=idle
+ExecStart=/usr/bin/python3 /home/pi/sonify/grouping.py
+WorkingDirectory=/home/pi/sonify
+
+Restart=always
+RestartSec=10
+
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=sonify
+
+[Install]
+WantedBy=multi-user.target
