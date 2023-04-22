@@ -14,19 +14,20 @@ logger.setLevel(logging.INFO)
 while True:
     try:
         devices = {device.player_name: device for device in soco.discover()}
-        livingRoom = devices['Living Room']
+        print(devices)
+        master = devices['Kitchen']
         logger.info(devices)
 
-        logger.info(livingRoom.all_groups)
+        logger.info(master.all_groups)
 
-        biggestGroup = max(len(group.members) for group in livingRoom.all_groups)
+        biggestGroup = max(len(group.members) for group in master.all_groups)
         logger.info(f'Biggest Group = {biggestGroup}')
         if biggestGroup < 2:
             logger.info(f'joining groups')
-            devices['Den'].join(livingRoom)
+            devices['Living Room'].join(master)
             time.sleep(1)
-            livingRoom.play()
+            master.play()
     except Exception as err:
         logger.exception(f'{type(err).__name__} trying to reconnect...')
-    time.sleep(5)
+    time.sleep(30)
 
