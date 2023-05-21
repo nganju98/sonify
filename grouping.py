@@ -15,18 +15,22 @@ while True:
     try:
         devices = {device.player_name: device for device in soco.discover()}
         print(devices)
-        master = devices['Kitchen']
+        primary = devices['Kitchen']
         logger.info(devices)
 
-        logger.info(master.all_groups)
-
-        biggestGroup = max(len(group.members) for group in master.all_groups)
+        logger.info(primary.all_groups)
+        print(primary.volume)
+        biggestGroup = max(len(group.members) for group in primary.all_groups)
         logger.info(f'Biggest Group = {biggestGroup}')
+        secondary = devices['Dining Room']
+        if (secondary.volume != primary.volume):
+            secondary.volume = primary.volume
+            logger.info("Changing secondary volume to match primary")
         if biggestGroup < 2:
             logger.info(f'joining groups')
-            devices['Living Room'].join(master)
+            secondary.join(primary)
             time.sleep(1)
-            master.play()
+            primary.play()
     except Exception as err:
         logger.exception(f'{type(err).__name__} trying to reconnect...')
     time.sleep(30)
