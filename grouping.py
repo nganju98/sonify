@@ -1,5 +1,6 @@
 import time
 import soco
+from soco import SoCo
 import logging
 import logging.handlers
 
@@ -13,16 +14,16 @@ logger.setLevel(logging.INFO)
 
 while True:
     try:
-        devices = {device.player_name: device for device in soco.discover()}
-        print(devices)
-        primary = devices['Kitchen']
-        logger.info(devices)
+        #devices = {device.player_name: device for device in soco.discover()}
+        #print(devices)
+        primary = SoCo('192.168.68.70') #devices['Kitchen']
+        #logger.info(devices)
 
         logger.info(primary.all_groups)
-        print(primary.volume)
+        #print(primary.volume)
         biggestGroup = max(len(group.members) for group in primary.all_groups)
         logger.info(f'Biggest Group = {biggestGroup}')
-        secondary = devices['Dining Room']
+        secondary = SoCo('192.168.68.71') #devices['Dining Room']
         if (secondary.volume != primary.volume):
             secondary.volume = primary.volume
             logger.info("Changing secondary volume to match primary")
